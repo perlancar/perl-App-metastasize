@@ -1,0 +1,97 @@
+#!perl
+
+# DATE
+# VERSION
+
+use 5.010001;
+use strict;
+use warnings;
+
+our %SPEC;
+
+$SPEC{app} = {
+    v => 1.1,
+    summary => 'Rename functions and variables in a Perl script/module '.
+        'with metasyntactic variables',
+    args => {
+        infile => {
+            schema => 'perl::filename',
+            req => 1,
+            pos => 0,
+        },
+        outfile => {
+            schema => 'filename',
+            default => '-',
+        },
+        theme => {
+            schema => 'perl::modname',
+            default => 'foo',
+            completion => sub {
+                my %args = @_;
+                require Complete::Module;
+                Complete::Module::complete_module(
+                    word => $args{word},
+                    ns_prefix => 'Acme::MetaSyntactic',
+                );
+            },
+        },
+    },
+};
+sub app {
+    require Acme::MetaSyntactic;
+    require Acme::PPIx::MetaSyntactic;
+    require File::Slurper;
+
+    my %args = @_;
+
+    my $acme = Acme::PPIx::MetaSyntactic->new(
+        document => \(File::Slurper::read_text($args{infile})),
+        theme => Acme::MetaSyntactic->new($args{theme}),
+    );
+
+    #use DD; dd $acme->theme;
+
+    my $output = $acme->document;
+    if ($args{outfile} eq '-') {
+        return [200, "OK", "$output"];
+    } else {
+        File::Slurper::write_text($args{outfile}, "$output");
+        return [200, "OK"];
+    }
+}
+
+require Perinci::CmdLine::Any;
+Perinci::CmdLine::Any->new(url => '/main/app')->run;
+
+1;
+#ABSTRACT:
+
+=head1 SYNOPSIS
+
+ % metastasize foo.pl
+
+Original F<foo.pl>:
+
+ use v5.010;
+ use constant PLACE => "World";
+
+ sub join_spaces {
+     return join " ", @_;
+ }
+
+ my @greetings = qw(Hello);
+
+ say join_spaces($greetings[0], PLACE);
+
+Example output:
+
+ use v5.010;
+ use constant VULTURE => "World";
+
+ sub fraud {
+     return join " ", @_;
+ }
+
+ my @gang_of_thieves = qw(Hello);
+
+ say fraud($gang_of_thieves[0], VULTURE);
