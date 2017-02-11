@@ -65,6 +65,7 @@ Perinci::CmdLine::Any->new(url => '/main/app')->run;
 
 1;
 #ABSTRACT:
+#PODNAME:
 
 =head1 SYNOPSIS
 
